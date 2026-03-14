@@ -18,11 +18,11 @@ export function ActionShortcuts({
   hasCart = false,
 }: ActionShortcutsProps) {
   const holdLabel = hasCart
-    ? "Hold Order"
+    ? "Tahan"
     : heldOrderCount > 0
-      ? `Resume Hold${heldOrderCount > 1 ? ` (${heldOrderCount})` : ""}`
-      : "Hold";
-  const discountLabel = hasDiscount ? "Remove Disc." : "Discount 10%";
+      ? `Ambil Hold${heldOrderCount > 1 ? ` (${heldOrderCount})` : ""}`
+      : "Tahan";
+  const discountLabel = hasDiscount ? "Lepas Diskon" : "Diskon 10%";
   const holdDisabled = !hasCart && heldOrderCount === 0;
   const discountDisabled = !hasCart;
 
@@ -50,7 +50,7 @@ export function ActionShortcuts({
           onClick={onClear}
           className="rounded-xl bg-stone-100 px-3 py-2"
         >
-          Clear
+          Reset
         </button>
       </div>
     );
@@ -75,7 +75,7 @@ export function ActionShortcuts({
         {discountLabel}
       </button>
       <button type="button" onClick={onClear} className="rounded-lg px-3 py-2 hover:bg-white">
-        Clear
+        Reset
       </button>
     </div>
   );

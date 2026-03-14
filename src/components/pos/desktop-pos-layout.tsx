@@ -120,43 +120,77 @@ export function DesktopPosLayout({
         </div>
       </main>
 
-      <aside className="flex w-[340px] shrink-0 flex-col border-l border-stone-200 bg-[#FBFAF8] p-4 xl:w-[360px]">
-        <div className="flex min-h-0 flex-1 flex-col space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-stone-800">Keranjang</h2>
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-stone-500 shadow-sm">
+      <aside className="w-[340px] shrink-0 border-l border-stone-200 bg-[#FBFAF8] p-4 xl:w-[360px]">
+        <div className="sticky top-4 flex max-h-[calc(100vh-110px)] flex-col overflow-hidden rounded-[28px] border border-stone-200 bg-white p-4 shadow-[0_14px_35px_rgba(0,0,0,0.06)]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-stone-800">Keranjang</h2>
+              <p className="mt-1 text-xs text-stone-400">
+                Ringkas, cepat, dan bisa discroll saat item bertambah.
+              </p>
+            </div>
+            <span className="rounded-full bg-[#FBFAF8] px-3 py-1 text-xs font-semibold text-stone-500">
               {itemCount} item
             </span>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-              {cart.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-stone-300 p-6 text-center text-sm text-stone-400">
-                  Keranjang masih kosong
+          <div className="mt-4 flex min-h-0 flex-1 flex-col">
+            <section className="flex min-h-0 flex-1 flex-col rounded-3xl bg-[#FBFAF8] p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-400">
+                    Item Pesanan
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-stone-700">
+                    Scroll untuk melihat semua isi keranjang
+                  </p>
                 </div>
-              ) : (
-                cart.map((item) => (
-                  <CartItemRow
-                    key={item.cartKey}
-                    item={item}
-                    onIncrease={onIncreaseQty}
-                    onDecrease={onDecreaseQty}
-                    onRemove={onRemoveItem}
-                  />
-                ))
-              )}
-            </div>
+                {hasCart ? (
+                  <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-stone-500">
+                    Aktif
+                  </span>
+                ) : null}
+              </div>
 
-            <div className="mt-auto space-y-4 border-t border-stone-200 pt-4">
-              <CartSummary
-                subtotal={subtotal}
-                discount={discountAmount}
-                tax={tax}
-                total={total}
-              />
-              <PaymentMethodSelector value={paymentMethod} onChange={onPaymentMethodChange} />
+              <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                {cart.length === 0 ? (
+                  <div className="flex min-h-[120px] items-center justify-center rounded-2xl border border-dashed border-stone-300 bg-white px-4 text-center text-sm text-stone-400">
+                    Keranjang masih kosong
+                  </div>
+                ) : (
+                  cart.map((item) => (
+                    <CartItemRow
+                      key={item.cartKey}
+                      item={item}
+                      onIncrease={onIncreaseQty}
+                      onDecrease={onDecreaseQty}
+                      onRemove={onRemoveItem}
+                    />
+                  ))
+                )}
+              </div>
+            </section>
+
+            <div className="mt-4 space-y-3 border-t border-stone-200 pt-4">
+              <div className="rounded-3xl bg-[#FBFAF8] p-3">
+                <CartSummary
+                  subtotal={subtotal}
+                  discount={discountAmount}
+                  tax={tax}
+                  total={total}
+                />
+              </div>
+
+              <div className="rounded-3xl border border-stone-200 p-3">
+                <PaymentMethodSelector
+                  value={paymentMethod}
+                  onChange={onPaymentMethodChange}
+                  compact
+                />
+              </div>
+
               <ActionShortcuts
+                compact
                 onClear={onClearCart}
                 onHold={onHoldOrder}
                 onToggleDiscount={onToggleDiscount}
