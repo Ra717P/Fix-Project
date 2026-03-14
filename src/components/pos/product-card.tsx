@@ -12,36 +12,36 @@ export function ProductCard({ item, onAdd }: ProductCardProps) {
   const variants = item.tags.length > 0 ? item.tags : ["Regular"];
 
   return (
-    <article className="flex h-full flex-col rounded-[28px] border border-stone-200 bg-white p-3 shadow-[0_10px_30px_rgba(28,25,23,0.05)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(28,25,23,0.08)]">
-      <div className="aspect-[4/3] overflow-hidden rounded-[22px] bg-stone-100">
+    <article className="flex h-full flex-col overflow-hidden rounded-[26px] border border-stone-200 bg-white shadow-[0_10px_28px_rgba(28,25,23,0.05)] transition hover:shadow-[0_16px_34px_rgba(28,25,23,0.08)]">
+      <div className="aspect-[1.08/1] overflow-hidden bg-stone-100">
         <Image
           src={item.image}
           alt={item.name}
           width={500}
           height={420}
-          className="h-full w-full object-cover transition duration-500 hover:scale-[1.03]"
+          className="h-full w-full object-cover transition duration-500 hover:scale-[1.02]"
         />
       </div>
 
-      <div className="flex flex-1 flex-col px-1 pb-1 pt-4">
-        <div className="min-h-[72px]">
-          <h3 className="text-base font-semibold leading-tight text-stone-900 lg:text-lg">
+      <div className="flex flex-1 flex-col p-3.5">
+        <div className="min-h-[58px]">
+          <h3 className="text-[15px] font-semibold leading-snug text-stone-900 lg:text-base">
             {item.name}
           </h3>
-          <p className="mt-2 text-lg font-semibold tracking-[-0.01em] text-[#8B572A] lg:text-[22px]">
+          <p className="mt-1 text-sm font-semibold text-[#8B572A] lg:text-[15px]">
             {formatRupiah(item.price)}
           </p>
         </div>
 
-        <div className="mt-auto pt-3">
-          <div className="grid grid-cols-2 gap-2.5">
+        <div className="mt-auto border-t border-stone-100 pt-3">
+          <div className="grid grid-cols-2 gap-2">
             {variants.map((variant, index) => (
               <button
                 key={`${item.id}-${variant}`}
                 type="button"
                 onClick={() => onAdd(item, variant)}
                 className={cn(
-                  "rounded-2xl border px-3 py-2.5 text-sm font-semibold transition",
+                  "h-10 rounded-xl border px-3 text-sm font-semibold transition",
                   variant.toLowerCase() === "hot" &&
                     "border-[#8B572A] bg-[#8B572A] text-white hover:opacity-90",
                   variant.toLowerCase() === "ice" &&

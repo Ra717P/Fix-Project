@@ -8,7 +8,7 @@ interface ProductGridProps {
 
 export function ProductGrid({ items, onAdd }: ProductGridProps) {
   return (
-    <div className="grid auto-rows-fr grid-cols-2 gap-4 md:grid-cols-3 2xl:grid-cols-4">
+    <div className="grid auto-rows-fr grid-cols-2 gap-4 xl:grid-cols-3 2xl:grid-cols-4">
       {items.map((item) => (
         <ProductCard key={item.id} item={item} onAdd={onAdd} />
       ))}
