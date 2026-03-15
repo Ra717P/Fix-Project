@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils/cn";
+
 interface ActionShortcutsProps {
   onClear?: () => void;
   onHold?: () => void;
@@ -25,6 +27,17 @@ export function ActionShortcuts({
   const discountLabel = hasDiscount ? "Lepas Diskon" : "Diskon 10%";
   const holdDisabled = !hasCart && heldOrderCount === 0;
   const discountDisabled = !hasCart;
+  const clearDisabled = !hasCart;
+  const holdActive = heldOrderCount > 0;
+
+  const compactButtonClassName =
+    "rounded-xl border px-3 py-2 font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50";
+  const defaultCompactClassName =
+    "border-stone-200 bg-stone-100 text-stone-600 hover:bg-stone-200";
+  const fullButtonClassName =
+    "rounded-lg border px-3 py-2 font-medium transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50";
+  const defaultFullClassName =
+    "border-transparent bg-transparent text-stone-600 hover:bg-white";
 
   if (compact) {
     return (
@@ -33,7 +46,13 @@ export function ActionShortcuts({
           type="button"
           onClick={onHold}
           disabled={holdDisabled}
-          className="rounded-xl bg-stone-100 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+          aria-pressed={holdActive}
+          className={cn(
+            compactButtonClassName,
+            holdActive
+              ? "border-[#8B572A] bg-[#8B572A] text-white shadow-[0_8px_18px_rgba(139,87,42,0.22)] hover:opacity-90"
+              : defaultCompactClassName
+          )}
         >
           {holdLabel}
         </button>
@@ -41,14 +60,26 @@ export function ActionShortcuts({
           type="button"
           onClick={onToggleDiscount}
           disabled={discountDisabled}
-          className="rounded-xl bg-stone-100 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+          aria-pressed={hasDiscount}
+          className={cn(
+            compactButtonClassName,
+            hasDiscount
+              ? "border-[#1D6B3A] bg-[#E8F5EC] text-[#1D6B3A] shadow-[0_8px_18px_rgba(29,107,58,0.12)] hover:opacity-90"
+              : defaultCompactClassName
+          )}
         >
           {discountLabel}
         </button>
         <button
           type="button"
           onClick={onClear}
-          className="rounded-xl bg-stone-100 px-3 py-2"
+          disabled={clearDisabled}
+          className={cn(
+            compactButtonClassName,
+            hasCart
+              ? "border-[#F3D7D7] bg-[#FDECEC] text-[#9A2B2B] hover:opacity-90"
+              : defaultCompactClassName
+          )}
         >
           Reset
         </button>
@@ -62,7 +93,13 @@ export function ActionShortcuts({
         type="button"
         onClick={onHold}
         disabled={holdDisabled}
-        className="rounded-lg px-3 py-2 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+        aria-pressed={holdActive}
+        className={cn(
+          fullButtonClassName,
+          holdActive
+            ? "border-[#8B572A] bg-white text-[#8B572A] shadow-sm"
+            : defaultFullClassName
+        )}
       >
         {holdLabel}
       </button>
@@ -70,11 +107,27 @@ export function ActionShortcuts({
         type="button"
         onClick={onToggleDiscount}
         disabled={discountDisabled}
-        className="rounded-lg px-3 py-2 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+        aria-pressed={hasDiscount}
+        className={cn(
+          fullButtonClassName,
+          hasDiscount
+            ? "border-[#1D6B3A] bg-white text-[#1D6B3A] shadow-sm"
+            : defaultFullClassName
+        )}
       >
         {discountLabel}
       </button>
-      <button type="button" onClick={onClear} className="rounded-lg px-3 py-2 hover:bg-white">
+      <button
+        type="button"
+        onClick={onClear}
+        disabled={clearDisabled}
+        className={cn(
+          fullButtonClassName,
+          hasCart
+            ? "border-[#F3D7D7] bg-white text-[#9A2B2B] shadow-sm hover:bg-[#FFF7F7]"
+            : defaultFullClassName
+        )}
+      >
         Reset
       </button>
     </div>

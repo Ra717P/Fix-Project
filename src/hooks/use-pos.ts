@@ -8,10 +8,12 @@ import type {
   CompletedOrder,
   CompletedOrderItem,
   HeldOrder,
+  MenuFormValues,
   MenuItem,
   OrderType,
   PaymentMethod,
   PosAlert,
+  SidebarSection,
 } from "@/types/pos";
 
 const DISCOUNT_RATE = 0.1;
@@ -47,6 +49,14 @@ function parseAmount(value: string) {
   return digitsOnly.length === 0 ? 0 : Number.parseInt(digitsOnly, 10);
 }
 
+function normalizeCategoryValue(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function createCompletedItems(items: CartItem[]): CompletedOrderItem[] {
   return items.map((item) => ({
     id: item.id,
@@ -57,12 +67,28 @@ function createCompletedItems(items: CartItem[]): CompletedOrderItem[] {
   }));
 }
 
+function syncCartItemWithMenu(item: CartItem, menu: MenuItem) {
+  if (item.id !== menu.id) {
+    return item;
+  }
+
+  return {
+    ...item,
+    name: menu.name,
+    price: menu.price,
+    image: menu.image,
+  };
+}
+
 export function usePos() {
+  const [activeSidebarItem, setActiveSidebarItem] = useState<SidebarSection>("orders");
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedOrderType, setSelectedOrderType] = useState<OrderType>("dine_in");
   const [tableNumber, setTableNumber] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [menuCatalog, setMenuCatalog] = useState<MenuItem[]>(menuItems);
+  const [customMenuCategories, setCustomMenuCategories] = useState<string[]>([]);
   const [cart, setCart] = useState<CartItem[]>(initialCart);
   const [discountRate, setDiscountRate] = useState(0);
   const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([]);
@@ -73,7 +99,7 @@ export function usePos() {
   const [lastCompletedOrder, setLastCompletedOrder] = useState<CompletedOrder | null>(null);
 
   const filteredMenu = useMemo(() => {
-    return menuItems.filter((item) => {
+    return menuCatalog.filter((item) => {
       const matchCategory =
         selectedCategory === "all" ||
         selectedCategory === "more" ||
@@ -84,7 +110,13 @@ export function usePos() {
 
       return matchCategory && matchSearch;
     });
-  }, [search, selectedCategory]);
+  }, [menuCatalog, search, selectedCategory]);
+
+  const menuManagementCategories = useMemo(() => {
+    return Array.from(
+      new Set([...menuCatalog.map((item) => item.category), ...customMenuCategories])
+    ).sort((left, right) => left.localeCompare(right));
+  }, [customMenuCategories, menuCatalog]);
 
   const itemCount = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.qty, 0);
@@ -433,7 +465,154 @@ export function usePos() {
     validateOrderSetup,
   ]);
 
+  const createMenuItem = useCallback(
+    (values: MenuFormValues) => {
+      setMenuCatalog((prev) => {
+        const nextId = prev.length === 0 ? 1 : Math.max(...prev.map((menu) => menu.id)) + 1;
+
+        return [
+          {
+            id: nextId,
+            name: values.name,
+            price: values.price,
+            image: values.image,
+            category: values.category,
+            tags: values.tags,
+            isAvailable: values.isAvailable,
+          },
+          ...prev,
+        ];
+      });
+      showAlert({
+        tone: "success",
+        title: "Menu ditambahkan",
+        message: `${values.name} berhasil masuk ke katalog.`,
+      });
+      setActiveSidebarItem("settings");
+    },
+    [showAlert]
+  );
+
+  const createMenuCategory = useCallback(
+    (value: string) => {
+      const normalizedCategory = normalizeCategoryValue(value);
+
+      if (!normalizedCategory) {
+        showAlert({
+          tone: "error",
+          title: "Nama filter belum valid",
+          message: "Masukkan nama filter menu terlebih dahulu.",
+        });
+        return null;
+      }
+
+      if (menuManagementCategories.includes(normalizedCategory)) {
+        showAlert({
+          tone: "info",
+          title: "Filter sudah ada",
+          message: `${value.trim()} sudah tersedia di daftar filter menu.`,
+        });
+        return null;
+      }
+
+      setCustomMenuCategories((prev) =>
+        [...prev, normalizedCategory].sort((left, right) => left.localeCompare(right))
+      );
+      setActiveSidebarItem("settings");
+      showAlert({
+        tone: "success",
+        title: "Filter ditambahkan",
+        message: `${value.trim()} siap dipakai untuk mengelompokkan menu.`,
+      });
+
+      return normalizedCategory;
+    },
+    [menuManagementCategories, showAlert]
+  );
+
+  const updateMenuItem = useCallback(
+    (itemId: number, values: MenuFormValues) => {
+      let updatedMenu: MenuItem | null = null;
+
+      setMenuCatalog((prev) =>
+        prev.map((item) => {
+          if (item.id !== itemId) {
+            return item;
+          }
+
+          updatedMenu = {
+            ...item,
+            name: values.name,
+            price: values.price,
+            image: values.image,
+            category: values.category,
+            tags: values.tags,
+            isAvailable: values.isAvailable,
+          };
+
+          return updatedMenu;
+        })
+      );
+
+      if (!updatedMenu) {
+        return;
+      }
+
+      setCart((prev) => prev.map((item) => syncCartItemWithMenu(item, updatedMenu as MenuItem)));
+      setHeldOrders((prev) =>
+        prev.map((order) => ({
+          ...order,
+          items: order.items.map((item) => syncCartItemWithMenu(item, updatedMenu as MenuItem)),
+        }))
+      );
+      showAlert({
+        tone: "success",
+        title: "Menu diperbarui",
+        message: `${values.name} berhasil diperbarui.`,
+      });
+      setActiveSidebarItem("settings");
+    },
+    [showAlert]
+  );
+
+  const toggleMenuAvailability = useCallback(
+    (itemId: number) => {
+      let updatedMenu: MenuItem | null = null;
+
+      setMenuCatalog((prev) =>
+        prev.map((item) => {
+          if (item.id !== itemId) {
+            return item;
+          }
+
+          updatedMenu = {
+            ...item,
+            isAvailable: !item.isAvailable,
+          };
+
+          return updatedMenu;
+        })
+      );
+
+      if (!updatedMenu) {
+        return;
+      }
+
+      showAlert({
+        tone: (updatedMenu as MenuItem).isAvailable ? "success" : "info",
+        title: (updatedMenu as MenuItem).isAvailable ? "Menu diaktifkan" : "Menu ditandai habis",
+        message: (updatedMenu as MenuItem).isAvailable
+          ? `${(updatedMenu as MenuItem).name} kembali bisa dijual.`
+          : `${(updatedMenu as MenuItem).name} sementara tidak bisa ditambahkan ke keranjang.`,
+      });
+      setActiveSidebarItem("settings");
+    },
+    [showAlert]
+  );
+
   return {
+    activeSidebarItem,
+    setActiveSidebarItem,
     search,
     setSearch,
     selectedCategory,
@@ -446,6 +625,8 @@ export function usePos() {
     setPaymentMethod,
     cart,
     itemCount,
+    menuCatalog,
+    menuManagementCategories,
     filteredMenu,
     subtotal,
     discountAmount,
@@ -476,6 +657,10 @@ export function usePos() {
     setCashReceived: updateCashReceived,
     useExactCashAmount,
     completePayment,
+    createMenuItem,
+    createMenuCategory,
+    updateMenuItem,
+    toggleMenuAvailability,
     dismissAlert,
   };
 }

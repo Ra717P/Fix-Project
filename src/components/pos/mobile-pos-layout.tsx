@@ -14,6 +14,7 @@ interface MobilePosLayoutProps {
   search: string;
   onSearchChange: (value: string) => void;
   selectedCategory: string;
+  categoryOptions: string[];
   onCategoryChange: (value: string) => void;
   selectedOrderType: OrderType;
   onOrderTypeChange: (value: OrderType) => void;
@@ -39,6 +40,7 @@ export function MobilePosLayout({
   search,
   onSearchChange,
   selectedCategory,
+  categoryOptions,
   onCategoryChange,
   selectedOrderType,
   onOrderTypeChange,
@@ -69,7 +71,11 @@ export function MobilePosLayout({
         {selectedOrderType === "dine_in" ? (
           <TableInput value={tableNumber} onChange={onTableNumberChange} />
         ) : null}
-        <CategoryTabs value={selectedCategory} onChange={onCategoryChange} />
+        <CategoryTabs
+          value={selectedCategory}
+          options={categoryOptions}
+          onChange={onCategoryChange}
+        />
 
         <section>
           <div className="mb-3 flex items-center justify-between">

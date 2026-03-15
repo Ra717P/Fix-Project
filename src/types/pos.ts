@@ -2,6 +2,9 @@ import type { LucideIcon } from "lucide-react";
 
 export type PaymentMethod = "cash" | "qris" | "ewallet";
 export type OrderType = "dine_in" | "takeaway" | "delivery";
+export type SidebarSection = "orders" | "transactions" | "reports" | "employees" | "settings";
+export type EmployeeRole = "Owner" | "Admin" | "Cashier" | "Barista";
+export type EmployeeStatus = "Aktif" | "Nonaktif" | "Cuti";
 
 export interface CategoryItem {
   id: string;
@@ -15,6 +18,7 @@ export interface MenuItem {
   image: string;
   category: string;
   tags: string[];
+  isAvailable: boolean;
 }
 
 export interface CartItem {
@@ -28,10 +32,45 @@ export interface CartItem {
 }
 
 export interface SidebarItem {
-  id: string;
+  id: SidebarSection;
   label: string;
   icon: LucideIcon;
   active?: boolean;
+}
+
+export interface MenuFormValues {
+  name: string;
+  price: number;
+  image: string;
+  category: string;
+  tags: string[];
+  isAvailable: boolean;
+}
+
+export interface EmployeeItem {
+  id: string;
+  name: string;
+  image: string;
+  role: EmployeeRole;
+  shift: string;
+  schedule: string;
+  status: EmployeeStatus;
+  phone: string;
+  username: string;
+  pinCode: string;
+  lastLogin: string;
+}
+
+export interface EmployeeFormValues {
+  name: string;
+  image: string;
+  role: EmployeeRole;
+  shift: string;
+  schedule: string;
+  status: EmployeeStatus;
+  phone: string;
+  username: string;
+  pinCode: string;
 }
 
 export interface HeldOrder {

@@ -6,7 +6,6 @@ import { OrderTypeTabs } from "@/components/pos/order-type-tabs";
 import { PaymentMethodSelector } from "@/components/pos/payment-method-selector";
 import { ProductGrid } from "@/components/pos/product-grid";
 import { SearchBar } from "@/components/pos/search-bar";
-import { SidebarNav } from "@/components/pos/sidebar-nav";
 import { TableInput } from "@/components/pos/table-input";
 import type { CartItem, MenuItem, OrderType, PaymentMethod } from "@/types/pos";
 
@@ -14,6 +13,7 @@ interface DesktopPosLayoutProps {
   search: string;
   onSearchChange: (value: string) => void;
   selectedCategory: string;
+  categoryOptions: string[];
   onCategoryChange: (value: string) => void;
   selectedOrderType: OrderType;
   onOrderTypeChange: (value: OrderType) => void;
@@ -44,6 +44,7 @@ export function DesktopPosLayout({
   search,
   onSearchChange,
   selectedCategory,
+  categoryOptions,
   onCategoryChange,
   selectedOrderType,
   onOrderTypeChange,
@@ -73,9 +74,7 @@ export function DesktopPosLayout({
   const showTableInput = selectedOrderType === "dine_in";
 
   return (
-    <div className="hidden lg:flex lg:min-h-[calc(100vh-73px)]">
-      <SidebarNav />
-
+    <>
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden p-4">
         <div className="flex min-h-0 flex-1 flex-col space-y-5">
           <SearchBar value={search} onChange={onSearchChange} />
@@ -112,7 +111,11 @@ export function DesktopPosLayout({
             </div>
           </section>
 
-          <CategoryTabs value={selectedCategory} onChange={onCategoryChange} />
+          <CategoryTabs
+            value={selectedCategory}
+            options={categoryOptions}
+            onChange={onCategoryChange}
+          />
 
           <div className="min-h-0 flex-1 overflow-y-auto pr-1">
             <ProductGrid items={products} onAdd={onAddToCart} />
@@ -210,6 +213,6 @@ export function DesktopPosLayout({
           </div>
         </div>
       </aside>
-    </div>
+    </>
   );
 }
