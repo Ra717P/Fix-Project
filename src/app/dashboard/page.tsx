@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { useMemo } from "react";
 import { Coffee, FileBarChart2, Settings, ShoppingBag, Users } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { employeeItems, salesOverview, storeSettings } from "@/data/dashboard-data";
 import { menuItems } from "@/data/pos-data";
+import { useAuth } from "@/hooks/use-auth";
 import { formatRupiah } from "@/lib/utils/format-rupiah";
 
 const adminLinks = [
@@ -33,6 +37,13 @@ const adminLinks = [
 ] as const;
 
 export default function DashboardPage() {
+  const { session } = useAuth();
+  const visibleAdminLinks = useMemo(() => {
+    const isOwner = session?.role === "Owner";
+
+    return adminLinks.filter((item) => (item.href === "/dashboard/karyawan" ? isOwner : true));
+  }, [session?.role]);
+
   return (
     <main className="min-h-screen bg-[#F7F4F1] p-4 text-stone-900 lg:p-6">
       <div className="mx-auto max-w-[1280px] space-y-6">
@@ -98,7 +109,7 @@ export default function DashboardPage() {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-2">
-          {adminLinks.map((item) => {
+          {visibleAdminLinks.map((item) => {
             const Icon = item.icon;
 
             return (

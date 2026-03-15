@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { useMemo } from "react";
 import { sidebarItems } from "@/data/pos-data";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils/cn";
@@ -11,11 +12,16 @@ interface SidebarNavProps {
 
 export function SidebarNav({ activeItem, onChange }: SidebarNavProps) {
   const { session } = useAuth();
+  const visibleSidebarItems = useMemo(() => {
+    const isOwner = session?.role === "Owner";
+
+    return sidebarItems.filter((item) => (item.id === "employees" ? isOwner : true));
+  }, [session?.role]);
 
   return (
     <aside className="hidden w-[68px] shrink-0 flex-col items-center justify-between border-r border-stone-200 bg-white py-4 lg:flex">
       <div className="flex w-full flex-col items-center gap-5">
-        {sidebarItems.map((item) => {
+        {visibleSidebarItems.map((item) => {
           const Icon = item.icon;
 
           return (

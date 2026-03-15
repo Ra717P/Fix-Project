@@ -12,6 +12,8 @@ import { employeeItems } from "@/data/dashboard-data";
 import type { EmployeeRole } from "@/types/pos";
 
 const AUTH_STORAGE_KEY = "sisi-kopi-auth-session";
+const AUTH_REDIRECT_STORAGE_KEY = "sisi-kopi-auth-redirect";
+const AUTH_LAST_USERNAME_STORAGE_KEY = "sisi-kopi-auth-last-username";
 
 export interface AuthSession {
   id: string;
@@ -26,6 +28,8 @@ export interface AuthSession {
 interface LoginResult {
   success: boolean;
   message?: string;
+  redirectTo?: string;
+  session?: AuthSession;
 }
 
 interface AuthContextValue {
@@ -40,6 +44,86 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 function getDefaultRouteForRole(role: EmployeeRole) {
   return role === "Owner" || role === "Admin" ? "/dashboard" : "/pos";
+}
+
+function canRoleAccessDashboard(role: EmployeeRole) {
+  return role === "Owner" || role === "Admin";
+}
+
+function canRoleManageEmployees(role: EmployeeRole) {
+  return role === "Owner";
+}
+
+function canRoleAccessPath(role: EmployeeRole, pathname: string) {
+  if (pathname.startsWith("/dashboard/karyawan")) {
+    return canRoleManageEmployees(role);
+  }
+
+  if (pathname.startsWith("/dashboard")) {
+    return canRoleAccessDashboard(role);
+  }
+
+  return pathname !== "/login";
+}
+
+function normalizeRedirectPath(pathname: string) {
+  const trimmedPathname = pathname.trim();
+
+  if (!trimmedPathname || trimmedPathname === "/login") {
+    return null;
+  }
+
+  return trimmedPathname.startsWith("/") ? trimmedPathname : `/${trimmedPathname}`;
+}
+
+function rememberAuthRedirect(pathname: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const normalizedPathname = normalizeRedirectPath(pathname);
+
+  if (!normalizedPathname) {
+    return;
+  }
+
+  window.localStorage.setItem(AUTH_REDIRECT_STORAGE_KEY, normalizedPathname);
+}
+
+function readAuthRedirect() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const storedPath = window.localStorage.getItem(AUTH_REDIRECT_STORAGE_KEY);
+  return storedPath ? normalizeRedirectPath(storedPath) : null;
+}
+
+function clearAuthRedirect() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(AUTH_REDIRECT_STORAGE_KEY);
+}
+
+function consumeAuthRedirect(role: EmployeeRole) {
+  const redirectPath = readAuthRedirect();
+  clearAuthRedirect();
+
+  if (redirectPath && canRoleAccessPath(role, redirectPath)) {
+    return redirectPath;
+  }
+
+  return getDefaultRouteForRole(role);
+}
+
+function getLastUsedUsername() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return window.localStorage.getItem(AUTH_LAST_USERNAME_STORAGE_KEY) ?? "";
 }
 
 function createSessionFromAccount(account: (typeof employeeItems)[number]): AuthSession {
@@ -68,7 +152,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const parsedSession = JSON.parse(storedValue) as AuthSession;
-      setSession(parsedSession);
+
+      const account = employeeItems.find(
+        (item) =>
+          item.id === parsedSession.id ||
+          item.username.toLowerCase() === parsedSession.username.toLowerCase()
+      );
+
+      if (!account || account.status !== "Aktif") {
+        window.localStorage.removeItem(AUTH_STORAGE_KEY);
+        setSession(null);
+        return;
+      }
+
+      const nextSession = createSessionFromAccount(account);
+      window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextSession));
+      window.localStorage.setItem(AUTH_LAST_USERNAME_STORAGE_KEY, nextSession.username);
+      setSession(nextSession);
     } catch {
       window.localStorage.removeItem(AUTH_STORAGE_KEY);
     } finally {
@@ -83,6 +183,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login: (username: string, pinCode: string) => {
         const normalizedUsername = username.trim().toLowerCase();
         const normalizedPin = pinCode.trim();
+
+        if (!normalizedUsername) {
+          return {
+            success: false,
+            message: "Username wajib diisi terlebih dahulu.",
+          };
+        }
+
+        if (!normalizedPin) {
+          return {
+            success: false,
+            message: "PIN wajib diisi terlebih dahulu.",
+          };
+        }
 
         const account = employeeItems.find(
           (item) => item.username.toLowerCase() === normalizedUsername
@@ -110,20 +224,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const nextSession = createSessionFromAccount(account);
+        const redirectTo = consumeAuthRedirect(account.role);
 
         window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextSession));
+        window.localStorage.setItem(AUTH_LAST_USERNAME_STORAGE_KEY, account.username);
         setSession(nextSession);
 
         return {
           success: true,
+          redirectTo,
+          session: nextSession,
         };
       },
       logout: () => {
         window.localStorage.removeItem(AUTH_STORAGE_KEY);
         setSession(null);
       },
-      canAccessDashboard:
-        session?.role === "Owner" || session?.role === "Admin" || false,
+      canAccessDashboard: session ? canRoleAccessDashboard(session.role) : false,
     };
   }, [isLoading, session]);
 
@@ -140,4 +257,13 @@ export function useAuth() {
   return context;
 }
 
-export { getDefaultRouteForRole };
+export {
+  canRoleAccessDashboard,
+  canRoleManageEmployees,
+  canRoleAccessPath,
+  clearAuthRedirect,
+  consumeAuthRedirect,
+  getDefaultRouteForRole,
+  getLastUsedUsername,
+  rememberAuthRedirect,
+};

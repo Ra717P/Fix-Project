@@ -2,13 +2,19 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { getDefaultRouteForRole, useAuth } from "@/hooks/use-auth";
+import {
+  canRoleAccessPath,
+  consumeAuthRedirect,
+  getDefaultRouteForRole,
+  rememberAuthRedirect,
+  useAuth,
+} from "@/hooks/use-auth";
 import type { ReactNode } from "react";
 
 export function AuthGuard({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { session, isLoading, canAccessDashboard } = useAuth();
+  const { session, isLoading } = useAuth();
 
   useEffect(() => {
     if (isLoading) {
@@ -16,22 +22,21 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     }
 
     const isLoginPage = pathname === "/login";
-    const isDashboardRoute = pathname.startsWith("/dashboard");
-
     if (!session && !isLoginPage) {
+      rememberAuthRedirect(pathname);
       router.replace("/login");
       return;
     }
 
     if (session && isLoginPage) {
-      router.replace(getDefaultRouteForRole(session.role));
+      router.replace(consumeAuthRedirect(session.role) ?? getDefaultRouteForRole(session.role));
       return;
     }
 
-    if (session && isDashboardRoute && !canAccessDashboard) {
-      router.replace("/pos");
+    if (session && !canRoleAccessPath(session.role, pathname)) {
+      router.replace(getDefaultRouteForRole(session.role));
     }
-  }, [canAccessDashboard, isLoading, pathname, router, session]);
+  }, [isLoading, pathname, router, session]);
 
   if (isLoading) {
     return (
@@ -42,8 +47,6 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   }
 
   const isLoginPage = pathname === "/login";
-  const isDashboardRoute = pathname.startsWith("/dashboard");
-
   if (!session && !isLoginPage) {
     return null;
   }
@@ -52,7 +55,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     return null;
   }
 
-  if (session && isDashboardRoute && !canAccessDashboard) {
+  if (session && !canRoleAccessPath(session.role, pathname)) {
     return null;
   }
 

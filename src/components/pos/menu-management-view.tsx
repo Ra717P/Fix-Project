@@ -340,7 +340,7 @@ export function MenuManagementView({
               </div>
             </div>
 
-            <div className="mt-5 min-h-0 space-y-3">
+            <div className="mt-5 min-h-0">
               {filteredItems.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-stone-300 bg-stone-50 px-6 py-10 text-center">
                   <p className="text-lg font-semibold text-stone-800">Menu tidak ditemukan</p>
@@ -349,88 +349,115 @@ export function MenuManagementView({
                   </p>
                 </div>
               ) : (
-                filteredItems.map((item) => (
-                  <article
-                    key={item.id}
-                    className="grid gap-4 rounded-3xl border border-stone-200 bg-stone-50 p-4 xl:grid-cols-[88px,1.05fr,0.8fr,0.55fr,160px] xl:items-center"
-                  >
-                    <div className="overflow-hidden rounded-2xl bg-white">
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        width={88}
-                        height={88}
-                        sizes="88px"
-                        className="h-[88px] w-full object-cover"
-                      />
-                    </div>
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                  {filteredItems.map((item) => (
+                    <article
+                      key={item.id}
+                      className={cn(
+                        "flex h-full flex-col overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-[0_10px_28px_rgba(28,25,23,0.05)] transition",
+                        item.isAvailable
+                          ? "hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(28,25,23,0.08)]"
+                          : "bg-stone-50 shadow-[0_8px_18px_rgba(28,25,23,0.04)]"
+                      )}
+                    >
+                      <div className="relative aspect-[1.08/1] overflow-hidden bg-stone-100">
+                        <div className="absolute left-3 top-3 z-[1] flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-white/95 px-3 py-1 text-[11px] font-semibold text-stone-600 shadow-sm backdrop-blur">
+                            {formatCategoryLabel(item.category)}
+                          </span>
+                          <span
+                            className={cn(
+                              "rounded-full px-3 py-1 text-[11px] font-semibold shadow-sm",
+                              item.isAvailable
+                                ? "bg-[#E8F5EC] text-[#1D6B3A]"
+                                : "bg-[#9A2B2B] text-white"
+                            )}
+                          >
+                            {item.isAvailable ? "Tersedia" : "Habis"}
+                          </span>
+                        </div>
 
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-lg font-semibold text-stone-900">{item.name}</p>
-                        <span
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          width={560}
+                          height={520}
+                          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
+                          unoptimized={item.image.startsWith("data:")}
                           className={cn(
-                            "rounded-full px-3 py-1 text-[11px] font-semibold",
-                            item.isAvailable
-                              ? "bg-[#E8F5EC] text-[#1D6B3A]"
-                              : "bg-[#FDECEC] text-[#9A2B2B]"
+                            "h-full w-full object-cover transition duration-500",
+                            item.isAvailable ? "hover:scale-[1.02]" : "grayscale-[0.2] opacity-75"
+                          )}
+                        />
+                      </div>
+
+                      <div className="flex flex-1 flex-col p-4">
+                        <div className="min-h-[90px]">
+                          <h3 className="text-lg font-semibold leading-snug text-stone-900">
+                            {item.name}
+                          </h3>
+                          <p className="mt-2 text-base font-semibold text-[#8B572A]">
+                            {formatRupiah(item.price)}
+                          </p>
+                          {!item.isAvailable ? (
+                            <p className="mt-1 text-xs font-medium text-[#9A2B2B]">
+                              Menu sedang ditandai habis.
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap gap-2 border-t border-stone-100 pt-3">
+                          {item.tags.map((tag) => (
+                            <span
+                              key={`${item.id}-${tag}`}
+                              className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+
+                        <div
+                          className={cn(
+                            "mt-auto pt-4",
+                            isOwner ? "grid grid-cols-2 gap-2" : "grid grid-cols-1"
                           )}
                         >
-                          {item.isAvailable ? "Tersedia" : "Habis"}
-                        </span>
+                          {isOwner ? (
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(item)}
+                              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-700 transition hover:bg-stone-100"
+                            >
+                              <PencilLine size={16} />
+                              Edit Menu
+                            </button>
+                          ) : null}
+
+                          <button
+                            type="button"
+                            onClick={() => onToggleAvailability(item.id)}
+                            disabled={!isOwner && !item.isAvailable}
+                            className={cn(
+                              "inline-flex h-11 items-center justify-center rounded-2xl px-4 text-sm font-semibold transition",
+                              !isOwner && !item.isAvailable
+                                ? "cursor-not-allowed bg-stone-200 text-stone-500"
+                                : item.isAvailable
+                                  ? "bg-[#FDECEC] text-[#9A2B2B] hover:opacity-90"
+                                  : "bg-[#E8F5EC] text-[#1D6B3A] hover:opacity-90"
+                            )}
+                          >
+                            {!isOwner && !item.isAvailable
+                              ? "Sudah Habis"
+                              : item.isAvailable
+                                ? "Tandai Habis"
+                                : "Aktifkan Lagi"}
+                          </button>
+                        </div>
                       </div>
-                      <p className="mt-1 text-sm text-stone-500">
-                        {formatCategoryLabel(item.category)}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {item.tags.map((tag) => (
-                        <span
-                          key={`${item.id}-${tag}`}
-                          className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-stone-600 shadow-sm"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-
-                    <p className="text-base font-semibold text-[#8B572A]">{formatRupiah(item.price)}</p>
-
-                    <div className="flex flex-col gap-2">
-                      {isOwner ? (
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(item)}
-                          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-700 transition hover:bg-stone-100"
-                        >
-                          <PencilLine size={16} />
-                          Edit Menu
-                        </button>
-                      ) : null}
-
-                      <button
-                        type="button"
-                        onClick={() => onToggleAvailability(item.id)}
-                        disabled={!isOwner && !item.isAvailable}
-                        className={cn(
-                          "inline-flex h-11 items-center justify-center rounded-2xl px-4 text-sm font-semibold transition",
-                          !isOwner && !item.isAvailable
-                            ? "cursor-not-allowed bg-stone-200 text-stone-500"
-                            : item.isAvailable
-                            ? "bg-[#FDECEC] text-[#9A2B2B] hover:opacity-90"
-                            : "bg-[#E8F5EC] text-[#1D6B3A] hover:opacity-90"
-                        )}
-                      >
-                        {!isOwner && !item.isAvailable
-                          ? "Sudah Habis"
-                          : item.isAvailable
-                            ? "Tandai Habis"
-                            : "Aktifkan Lagi"}
-                      </button>
-                    </div>
-                  </article>
-                ))
+                    </article>
+                  ))}
+                </div>
               )}
             </div>
           </section>

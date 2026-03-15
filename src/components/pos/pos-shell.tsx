@@ -1,13 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EmployeeManagementView } from "@/components/dashboard/employee-management-view";
 import { BrandHeader } from "@/components/pos/brand-header";
 import { DesktopPosLayout } from "@/components/pos/desktop-pos-layout";
 import { MobilePosLayout } from "@/components/pos/mobile-pos-layout";
 import { SidebarNav } from "@/components/pos/sidebar-nav";
 import { employeeItems } from "@/data/dashboard-data";
+import { useAuth } from "@/hooks/use-auth";
 import { usePos } from "@/hooks/use-pos";
 import { cn } from "@/lib/utils/cn";
 
@@ -35,6 +36,7 @@ const MobileSidebarNav = dynamic(
 );
 
 export function PosShell() {
+  const { session } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const {
     activeSidebarItem,
@@ -89,6 +91,15 @@ export function PosShell() {
     toggleMenuAvailability,
     dismissAlert,
   } = usePos();
+  const isOwner = session?.role === "Owner";
+  const normalizedActiveSidebarItem =
+    !isOwner && activeSidebarItem === "employees" ? "orders" : activeSidebarItem;
+
+  useEffect(() => {
+    if (!isOwner && activeSidebarItem === "employees") {
+      setActiveSidebarItem("orders");
+    }
+  }, [activeSidebarItem, isOwner, setActiveSidebarItem]);
 
   const placeholderContent = {
     transactions: {
@@ -102,6 +113,7 @@ export function PosShell() {
         "Halaman laporan bisa dipakai untuk omzet harian, menu terlaris, performa kasir, dan ringkasan pembayaran.",
     },
   } as const;
+  const placeholderKey = normalizedActiveSidebarItem === "reports" ? "reports" : "transactions";
 
   return (
     <div className="min-h-screen bg-[#F7F4F1] text-stone-900">
@@ -147,9 +159,9 @@ export function PosShell() {
         )}
 
         <div className="hidden lg:flex lg:min-h-[calc(100vh-73px)]">
-          <SidebarNav activeItem={activeSidebarItem} onChange={setActiveSidebarItem} />
+          <SidebarNav activeItem={normalizedActiveSidebarItem} onChange={setActiveSidebarItem} />
 
-          {activeSidebarItem === "orders" ? (
+          {normalizedActiveSidebarItem === "orders" ? (
             <DesktopPosLayout
               search={search}
               onSearchChange={setSearch}
@@ -180,7 +192,7 @@ export function PosShell() {
               hasDiscount={hasDiscount}
               heldOrderCount={heldOrderCount}
             />
-          ) : activeSidebarItem === "settings" ? (
+          ) : normalizedActiveSidebarItem === "settings" ? (
             <MenuManagementView
               items={menuCatalog}
               categoryOptions={menuManagementCategories}
@@ -189,19 +201,19 @@ export function PosShell() {
               onUpdateMenu={updateMenuItem}
               onToggleAvailability={toggleMenuAvailability}
             />
-          ) : activeSidebarItem === "employees" ? (
+          ) : normalizedActiveSidebarItem === "employees" && isOwner ? (
             <EmployeeManagementView initialItems={employeeItems} />
           ) : (
             <SidebarPlaceholderView
-              title={placeholderContent[activeSidebarItem].title}
-              description={placeholderContent[activeSidebarItem].description}
+              title={placeholderContent[placeholderKey].title}
+              description={placeholderContent[placeholderKey].description}
               onBackToOrders={() => setActiveSidebarItem("orders")}
             />
           )}
         </div>
 
         <div className="lg:hidden">
-          {activeSidebarItem === "orders" ? (
+          {normalizedActiveSidebarItem === "orders" ? (
             <MobilePosLayout
               search={search}
               onSearchChange={setSearch}
@@ -227,7 +239,7 @@ export function PosShell() {
               hasDiscount={hasDiscount}
               heldOrderCount={heldOrderCount}
             />
-          ) : activeSidebarItem === "settings" ? (
+          ) : normalizedActiveSidebarItem === "settings" ? (
             <MenuManagementView
               items={menuCatalog}
               categoryOptions={menuManagementCategories}
@@ -236,12 +248,12 @@ export function PosShell() {
               onUpdateMenu={updateMenuItem}
               onToggleAvailability={toggleMenuAvailability}
             />
-          ) : activeSidebarItem === "employees" ? (
+          ) : normalizedActiveSidebarItem === "employees" && isOwner ? (
             <EmployeeManagementView initialItems={employeeItems} />
           ) : (
             <SidebarPlaceholderView
-              title={placeholderContent[activeSidebarItem].title}
-              description={placeholderContent[activeSidebarItem].description}
+              title={placeholderContent[placeholderKey].title}
+              description={placeholderContent[placeholderKey].description}
               onBackToOrders={() => setActiveSidebarItem("orders")}
             />
           )}
@@ -249,7 +261,7 @@ export function PosShell() {
 
         <MobileSidebarNav
           isOpen={mobileSidebarOpen}
-          activeItem={activeSidebarItem}
+          activeItem={normalizedActiveSidebarItem}
           onChange={setActiveSidebarItem}
           onClose={() => setMobileSidebarOpen(false)}
         />

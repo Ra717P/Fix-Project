@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { X } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
@@ -26,6 +26,11 @@ export function MobileSidebarNav({
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const visibleSidebarItems = useMemo(() => {
+    const isOwner = session?.role === "Owner";
+
+    return sidebarItems.filter((item) => (item.id === "employees" ? isOwner : true));
+  }, [session?.role]);
 
   useEffect(() => {
     if (closeTimeoutRef.current) {
@@ -102,7 +107,7 @@ export function MobileSidebarNav({
         </div>
 
         <div className="mt-4 space-y-2">
-          {sidebarItems.map((item) => {
+          {visibleSidebarItems.map((item, index) => {
             const Icon = item.icon;
             const isActive = activeItem === item.id;
 
@@ -121,7 +126,7 @@ export function MobileSidebarNav({
                     : "bg-stone-100 text-stone-600 hover:bg-stone-200"
                 )}
                 style={{
-                  transitionDelay: isVisible ? `${40 + sidebarItems.indexOf(item) * 28}ms` : "0ms",
+                  transitionDelay: isVisible ? `${40 + index * 28}ms` : "0ms",
                 }}
               >
                 <Icon size={18} />
