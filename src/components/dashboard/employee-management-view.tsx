@@ -4,24 +4,16 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import { KeyRound, PencilLine, Search, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { EmployeeEditorSheet } from "@/components/dashboard/employee-editor-sheet";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils/cn";
 import type { EmployeeFormValues, EmployeeItem } from "@/types/pos";
 
-interface EmployeeManagementViewProps {
-  initialItems: EmployeeItem[];
+function isLockedEmployee(employee: EmployeeItem) {
+  return employee.role === "Owner";
 }
 
-function createEmployeeId(items: EmployeeItem[]) {
-  const ids = items
-    .map((item) => Number(item.id.split("-")[1]))
-    .filter((value) => Number.isFinite(value));
-  const nextId = ids.length === 0 ? 1 : Math.max(...ids) + 1;
-
-  return `EMP-${String(nextId).padStart(3, "0")}`;
-}
-
-export function EmployeeManagementView({ initialItems }: EmployeeManagementViewProps) {
-  const [employees, setEmployees] = useState<EmployeeItem[]>(initialItems);
+export function EmployeeManagementView() {
+  const { employees, resetEmployeePin, saveEmployee, toggleEmployeeStatus } = useAuth();
   const [search, setSearch] = useState("");
   const [selectedRole, setSelectedRole] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
@@ -70,39 +62,37 @@ export function EmployeeManagementView({ initialItems }: EmployeeManagementViewP
   };
 
   const handleEdit = (employee: EmployeeItem) => {
+    if (isLockedEmployee(employee)) {
+      setFeedback({
+        tone: "info",
+        title: "Akun owner dikunci",
+        message: "Akun owner utama tidak bisa diedit, direset PIN-nya, atau dinonaktifkan.",
+      });
+      return;
+    }
+
     setEditingEmployee(employee);
     setEditorOpen(true);
   };
 
   const handleSave = (values: EmployeeFormValues) => {
-    const normalizedUsername = values.username.trim().toLowerCase();
-    const duplicateUsername = employees.some(
-      (employee) =>
-        employee.username.toLowerCase() === normalizedUsername &&
-        employee.id !== editingEmployee?.id
-    );
+    const result = saveEmployee(editingEmployee?.id ?? null, values);
 
-    if (duplicateUsername) {
+    if (!result.success) {
       setFeedback({
-        tone: "error",
-        title: "Username sudah dipakai",
-        message: "Gunakan username lain agar akun karyawan tidak bentrok.",
+        tone: result.message?.includes("owner") ? "info" : "error",
+        title:
+          result.message?.includes("owner")
+            ? "Akun owner dikunci"
+            : result.message === "Akun karyawan tidak ditemukan."
+            ? "Akun tidak ditemukan"
+            : "Username sudah dipakai",
+        message: result.message ?? "Gunakan username lain agar akun karyawan tidak bentrok.",
       });
       return;
     }
 
     if (editingEmployee) {
-      setEmployees((prev) =>
-        prev.map((employee) =>
-          employee.id === editingEmployee.id
-            ? {
-                ...employee,
-                ...values,
-                username: normalizedUsername,
-              }
-            : employee
-        )
-      );
       setFeedback({
         tone: "success",
         title: "Akun diperbarui",
@@ -111,15 +101,6 @@ export function EmployeeManagementView({ initialItems }: EmployeeManagementViewP
       return;
     }
 
-    setEmployees((prev) => [
-      {
-        id: createEmployeeId(prev),
-        ...values,
-        username: normalizedUsername,
-        lastLogin: "Belum pernah login",
-      },
-      ...prev,
-    ]);
     setFeedback({
       tone: "success",
       title: "Akun ditambahkan",
@@ -128,66 +109,53 @@ export function EmployeeManagementView({ initialItems }: EmployeeManagementViewP
   };
 
   const handleToggleStatus = (employeeId: string) => {
-    let updatedEmployee: EmployeeItem | null = null;
+    const result = toggleEmployeeStatus(employeeId);
 
-    setEmployees((prev) =>
-      prev.map((employee) => {
-        if (employee.id !== employeeId) {
-          return employee;
-        }
+    if (!result.success || !result.employee) {
+      if (result.message) {
+        setFeedback({
+          tone: "info",
+          title: "Perubahan diblokir",
+          message: result.message,
+        });
+      }
 
-        updatedEmployee = {
-          ...employee,
-          status: employee.status === "Aktif" ? "Nonaktif" : "Aktif",
-        };
-
-        return updatedEmployee;
-      })
-    );
-
-    if (!updatedEmployee) {
       return;
     }
 
+    const updatedEmployee = result.employee;
+
     setFeedback({
-      tone: (updatedEmployee as EmployeeItem).status === "Aktif" ? "success" : "info",
-      title:
-        (updatedEmployee as EmployeeItem).status === "Aktif"
-          ? "Akun diaktifkan"
-          : "Akun dinonaktifkan",
+      tone: updatedEmployee.status === "Aktif" ? "success" : "info",
+      title: updatedEmployee.status === "Aktif" ? "Akun diaktifkan" : "Akun dinonaktifkan",
       message:
-        (updatedEmployee as EmployeeItem).status === "Aktif"
-          ? `${(updatedEmployee as EmployeeItem).name} kembali bisa memakai akun POS.`
-          : `${(updatedEmployee as EmployeeItem).name} tidak bisa login sampai diaktifkan lagi.`,
+        updatedEmployee.status === "Aktif"
+          ? `${updatedEmployee.name} kembali bisa memakai akun POS.`
+          : `${updatedEmployee.name} tidak bisa login sampai diaktifkan lagi.`,
     });
   };
 
   const handleResetPin = (employeeId: string) => {
-    let updatedEmployee: EmployeeItem | null = null;
+    const result = resetEmployeePin(employeeId);
 
-    setEmployees((prev) =>
-      prev.map((employee) => {
-        if (employee.id !== employeeId) {
-          return employee;
-        }
+    if (!result.success || !result.employee) {
+      if (result.message) {
+        setFeedback({
+          tone: "info",
+          title: "Perubahan diblokir",
+          message: result.message,
+        });
+      }
 
-        updatedEmployee = {
-          ...employee,
-          pinCode: "123456",
-        };
-
-        return updatedEmployee;
-      })
-    );
-
-    if (!updatedEmployee) {
       return;
     }
+
+    const updatedEmployee = result.employee;
 
     setFeedback({
       tone: "info",
       title: "PIN direset",
-      message: `PIN dummy ${(updatedEmployee as EmployeeItem).name} sudah direset ke 123456.`,
+      message: `PIN dummy ${updatedEmployee.name} sudah direset ke 123456.`,
     });
   };
 
@@ -319,10 +287,13 @@ export function EmployeeManagementView({ initialItems }: EmployeeManagementViewP
                 </div>
               ) : (
                 filteredEmployees.map((employee) => (
-                  <article
-                    key={employee.id}
-                    className="rounded-3xl border border-stone-200 bg-stone-50 p-5"
-                  >
+                  <article key={employee.id} className="rounded-3xl border border-stone-200 bg-stone-50 p-5">
+                    {isLockedEmployee(employee) ? (
+                      <div className="mb-4 rounded-2xl border border-[#E9D8C5] bg-[#FFF7EF] px-4 py-3 text-sm text-[#8B572A]">
+                        Akun owner dikunci untuk menjaga akses utama tetap aman.
+                      </div>
+                    ) : null}
+
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex items-start gap-4">
                         <div className="relative h-16 w-16 overflow-hidden rounded-[22px] bg-white shadow-sm ring-1 ring-stone-200">
@@ -402,37 +373,64 @@ export function EmployeeManagementView({ initialItems }: EmployeeManagementViewP
                     </div>
 
                     <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(employee)}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-700 transition hover:bg-stone-100"
-                      >
-                        <PencilLine size={16} />
-                        Edit Akun
-                      </button>
+                      {(() => {
+                        const isLocked = isLockedEmployee(employee);
 
-                      <button
-                        type="button"
-                        onClick={() => handleResetPin(employee.id)}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-700 transition hover:bg-stone-100"
-                      >
-                        <KeyRound size={16} />
-                        Reset PIN
-                      </button>
+                        return (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(employee)}
+                              disabled={isLocked}
+                              className={cn(
+                                "inline-flex h-11 items-center justify-center gap-2 rounded-2xl border px-4 text-sm font-semibold transition",
+                                isLocked
+                                  ? "cursor-not-allowed border-stone-200 bg-stone-100 text-stone-400"
+                                  : "border-stone-200 bg-white text-stone-700 hover:bg-stone-100"
+                              )}
+                            >
+                              <PencilLine size={16} />
+                              Edit Akun
+                            </button>
 
-                      <button
-                        type="button"
-                        onClick={() => handleToggleStatus(employee.id)}
-                        className={cn(
-                          "inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold transition",
-                          employee.status === "Aktif"
-                            ? "bg-[#FDECEC] text-[#9A2B2B] hover:opacity-90"
-                            : "bg-[#E8F5EC] text-[#1D6B3A] hover:opacity-90"
-                        )}
-                      >
-                        <ShieldCheck size={16} />
-                        {employee.status === "Aktif" ? "Nonaktifkan Akun" : "Aktifkan Akun"}
-                      </button>
+                            <button
+                              type="button"
+                              onClick={() => handleResetPin(employee.id)}
+                              disabled={isLocked}
+                              className={cn(
+                                "inline-flex h-11 items-center justify-center gap-2 rounded-2xl border px-4 text-sm font-semibold transition",
+                                isLocked
+                                  ? "cursor-not-allowed border-stone-200 bg-stone-100 text-stone-400"
+                                  : "border-stone-200 bg-white text-stone-700 hover:bg-stone-100"
+                              )}
+                            >
+                              <KeyRound size={16} />
+                              Reset PIN
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStatus(employee.id)}
+                              disabled={isLocked}
+                              className={cn(
+                                "inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold transition",
+                                isLocked
+                                  ? "cursor-not-allowed bg-stone-200 text-stone-500"
+                                  : employee.status === "Aktif"
+                                    ? "bg-[#FDECEC] text-[#9A2B2B] hover:opacity-90"
+                                    : "bg-[#E8F5EC] text-[#1D6B3A] hover:opacity-90"
+                              )}
+                            >
+                              <ShieldCheck size={16} />
+                              {isLocked
+                                ? "Akun Owner Terkunci"
+                                : employee.status === "Aktif"
+                                  ? "Nonaktifkan Akun"
+                                  : "Aktifkan Akun"}
+                            </button>
+                          </>
+                        );
+                      })()}
                     </div>
                   </article>
                 ))

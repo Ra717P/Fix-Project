@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { EmployeeManagementView } from "@/components/dashboard/employee-management-view";
-import { employeeItems } from "@/data/dashboard-data";
 
 export default function DashboardKaryawanPage() {
   return (
@@ -21,7 +20,7 @@ export default function DashboardKaryawanPage() {
         </div>
 
         <div className="overflow-hidden rounded-[32px] border border-stone-200 bg-white shadow-[0_16px_45px_rgba(28,25,23,0.06)]">
-          <EmployeeManagementView initialItems={employeeItems} />
+          <EmployeeManagementView />
         </div>
       </div>
     </div>

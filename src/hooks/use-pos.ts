@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { initialCart, menuItems } from "@/data/pos-data";
 import { formatRupiah } from "@/lib/utils/format-rupiah";
 import type {
@@ -38,7 +38,7 @@ const paymentStatuses: Record<PaymentMethod, string> = {
 };
 
 function createReference(prefix: string) {
-  const timestamp = new Date().toISOString().slice(11, 19).replaceAll(":", "");
+  const timestamp = new Date().toISOString().slice(11, 23).replace(/[^\d]/g, "");
   const random = Math.floor(Math.random() * 900 + 100);
 
   return `${prefix}-${timestamp}${random}`;
@@ -81,6 +81,16 @@ function syncCartItemWithMenu(item: CartItem, menu: MenuItem) {
 }
 
 export function usePos() {
+  const context = useContext(PosContext);
+
+  if (!context) {
+    throw new Error("usePos must be used within PosProvider");
+  }
+
+  return context;
+}
+
+export function useCreatePosStore() {
   const [activeSidebarItem, setActiveSidebarItem] = useState<SidebarSection>("orders");
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -100,10 +110,7 @@ export function usePos() {
 
   const filteredMenu = useMemo(() => {
     return menuCatalog.filter((item) => {
-      const matchCategory =
-        selectedCategory === "all" ||
-        selectedCategory === "more" ||
-        item.category === selectedCategory;
+      const matchCategory = selectedCategory === "all" || item.category === selectedCategory;
 
       const keyword = search.trim().toLowerCase();
       const matchSearch = keyword.length === 0 || item.name.toLowerCase().includes(keyword);
@@ -233,6 +240,15 @@ export function usePos() {
 
   const addToCart = useCallback(
     (item: MenuItem, variant: string) => {
+      if (!item.isAvailable) {
+        showAlert({
+          tone: "error",
+          title: "Menu sedang habis",
+          message: `${item.name} belum bisa ditambahkan ke keranjang sekarang.`,
+        });
+        return;
+      }
+
       const cartKey = `${item.id}-${variant.toLowerCase()}`;
 
       setCart((prev) => {
@@ -258,14 +274,34 @@ export function usePos() {
         ];
       });
     },
-    []
+    [showAlert]
   );
 
-  const increaseQty = useCallback((cartKey: string) => {
-    setCart((prev) =>
-      prev.map((item) => (item.cartKey === cartKey ? { ...item, qty: item.qty + 1 } : item))
-    );
-  }, []);
+  const increaseQty = useCallback(
+    (cartKey: string) => {
+      const currentItem = cart.find((item) => item.cartKey === cartKey);
+
+      if (!currentItem) {
+        return;
+      }
+
+      const currentMenuItem = menuCatalog.find((item) => item.id === currentItem.id);
+
+      if (currentMenuItem && !currentMenuItem.isAvailable) {
+        showAlert({
+          tone: "error",
+          title: "Menu sedang habis",
+          message: `${currentMenuItem.name} tidak bisa ditambah lagi ke keranjang.`,
+        });
+        return;
+      }
+
+      setCart((prev) =>
+        prev.map((item) => (item.cartKey === cartKey ? { ...item, qty: item.qty + 1 } : item))
+      );
+    },
+    [cart, menuCatalog, showAlert]
+  );
 
   const decreaseQty = useCallback((cartKey: string) => {
     setCart((prev) =>
@@ -532,37 +568,31 @@ export function usePos() {
 
   const updateMenuItem = useCallback(
     (itemId: number, values: MenuFormValues) => {
-      let updatedMenu: MenuItem | null = null;
+      const currentMenu = menuCatalog.find((item) => item.id === itemId);
 
-      setMenuCatalog((prev) =>
-        prev.map((item) => {
-          if (item.id !== itemId) {
-            return item;
-          }
-
-          updatedMenu = {
-            ...item,
-            name: values.name,
-            price: values.price,
-            image: values.image,
-            category: values.category,
-            tags: values.tags,
-            isAvailable: values.isAvailable,
-          };
-
-          return updatedMenu;
-        })
-      );
-
-      if (!updatedMenu) {
+      if (!currentMenu) {
         return;
       }
 
-      setCart((prev) => prev.map((item) => syncCartItemWithMenu(item, updatedMenu as MenuItem)));
+      const updatedMenu: MenuItem = {
+        ...currentMenu,
+        name: values.name,
+        price: values.price,
+        image: values.image,
+        category: values.category,
+        tags: values.tags,
+        isAvailable: values.isAvailable,
+      };
+
+      setMenuCatalog((prev) =>
+        prev.map((item) => (item.id === itemId ? updatedMenu : item))
+      );
+
+      setCart((prev) => prev.map((item) => syncCartItemWithMenu(item, updatedMenu)));
       setHeldOrders((prev) =>
         prev.map((order) => ({
           ...order,
-          items: order.items.map((item) => syncCartItemWithMenu(item, updatedMenu as MenuItem)),
+          items: order.items.map((item) => syncCartItemWithMenu(item, updatedMenu)),
         }))
       );
       showAlert({
@@ -572,42 +602,36 @@ export function usePos() {
       });
       setActiveSidebarItem("settings");
     },
-    [showAlert]
+    [menuCatalog, showAlert]
   );
 
   const toggleMenuAvailability = useCallback(
     (itemId: number) => {
-      let updatedMenu: MenuItem | null = null;
+      const currentMenu = menuCatalog.find((item) => item.id === itemId);
 
-      setMenuCatalog((prev) =>
-        prev.map((item) => {
-          if (item.id !== itemId) {
-            return item;
-          }
-
-          updatedMenu = {
-            ...item,
-            isAvailable: !item.isAvailable,
-          };
-
-          return updatedMenu;
-        })
-      );
-
-      if (!updatedMenu) {
+      if (!currentMenu) {
         return;
       }
 
+      const updatedMenu: MenuItem = {
+        ...currentMenu,
+        isAvailable: !currentMenu.isAvailable,
+      };
+
+      setMenuCatalog((prev) =>
+        prev.map((item) => (item.id === itemId ? updatedMenu : item))
+      );
+
       showAlert({
-        tone: (updatedMenu as MenuItem).isAvailable ? "success" : "info",
-        title: (updatedMenu as MenuItem).isAvailable ? "Menu diaktifkan" : "Menu ditandai habis",
-        message: (updatedMenu as MenuItem).isAvailable
-          ? `${(updatedMenu as MenuItem).name} kembali bisa dijual.`
-          : `${(updatedMenu as MenuItem).name} sementara tidak bisa ditambahkan ke keranjang.`,
+        tone: updatedMenu.isAvailable ? "success" : "info",
+        title: updatedMenu.isAvailable ? "Menu diaktifkan" : "Menu ditandai habis",
+        message: updatedMenu.isAvailable
+          ? `${updatedMenu.name} kembali bisa dijual.`
+          : `${updatedMenu.name} sementara tidak bisa ditambahkan ke keranjang.`,
       });
       setActiveSidebarItem("settings");
     },
-    [showAlert]
+    [menuCatalog, showAlert]
   );
 
   return {
@@ -664,3 +688,7 @@ export function usePos() {
     dismissAlert,
   };
 }
+
+type PosContextValue = ReturnType<typeof useCreatePosStore>;
+
+export const PosContext = createContext<PosContextValue | null>(null);

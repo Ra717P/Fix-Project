@@ -7,7 +7,6 @@ import { BrandHeader } from "@/components/pos/brand-header";
 import { DesktopPosLayout } from "@/components/pos/desktop-pos-layout";
 import { MobilePosLayout } from "@/components/pos/mobile-pos-layout";
 import { SidebarNav } from "@/components/pos/sidebar-nav";
-import { employeeItems } from "@/data/dashboard-data";
 import { useAuth } from "@/hooks/use-auth";
 import { usePos } from "@/hooks/use-pos";
 import { cn } from "@/lib/utils/cn";
@@ -202,7 +201,7 @@ export function PosShell() {
               onToggleAvailability={toggleMenuAvailability}
             />
           ) : normalizedActiveSidebarItem === "employees" && isOwner ? (
-            <EmployeeManagementView initialItems={employeeItems} />
+            <EmployeeManagementView />
           ) : (
             <SidebarPlaceholderView
               title={placeholderContent[placeholderKey].title}
@@ -249,7 +248,7 @@ export function PosShell() {
               onToggleAvailability={toggleMenuAvailability}
             />
           ) : normalizedActiveSidebarItem === "employees" && isOwner ? (
-            <EmployeeManagementView initialItems={employeeItems} />
+            <EmployeeManagementView />
           ) : (
             <SidebarPlaceholderView
               title={placeholderContent[placeholderKey].title}

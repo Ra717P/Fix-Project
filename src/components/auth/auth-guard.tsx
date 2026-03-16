@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   canRoleAccessPath,
-  consumeAuthRedirect,
   getDefaultRouteForRole,
   rememberAuthRedirect,
   useAuth,
@@ -28,12 +27,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (session && isLoginPage) {
-      router.replace(consumeAuthRedirect(session.role) ?? getDefaultRouteForRole(session.role));
-      return;
-    }
-
-    if (session && !canRoleAccessPath(session.role, pathname)) {
+    if (session && !isLoginPage && !canRoleAccessPath(session.role, pathname)) {
       router.replace(getDefaultRouteForRole(session.role));
     }
   }, [isLoading, pathname, router, session]);
@@ -51,11 +45,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     return null;
   }
 
-  if (session && isLoginPage) {
-    return null;
-  }
-
-  if (session && !canRoleAccessPath(session.role, pathname)) {
+  if (session && !isLoginPage && !canRoleAccessPath(session.role, pathname)) {
     return null;
   }
 

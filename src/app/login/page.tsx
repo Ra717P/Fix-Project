@@ -12,15 +12,16 @@ import {
   UserRound,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { employeeItems } from "@/data/dashboard-data";
 import { cn } from "@/lib/utils/cn";
 import {
+  consumeAuthRedirect,
   getDefaultRouteForRole,
   getLastUsedUsername,
   useAuth,
 } from "@/hooks/use-auth";
+import type { EmployeeRole } from "@/types/pos";
 
-function getRoleIcon(role: (typeof employeeItems)[number]["role"]) {
+function getRoleIcon(role: EmployeeRole) {
   if (role === "Owner" || role === "Admin") {
     return ShieldCheck;
   }
@@ -32,7 +33,7 @@ function getRoleIcon(role: (typeof employeeItems)[number]["role"]) {
   return Coffee;
 }
 
-function getRoleRouteLabel(role: (typeof employeeItems)[number]["role"]) {
+function getRoleRouteLabel(role: EmployeeRole) {
   return getDefaultRouteForRole(role) === "/dashboard"
     ? "Akses Dashboard"
     : "Akses POS";
@@ -40,7 +41,7 @@ function getRoleRouteLabel(role: (typeof employeeItems)[number]["role"]) {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading } = useAuth();
+  const { employees, login, isLoading, session } = useAuth();
   const [username, setUsername] = useState("");
   const [pinCode, setPinCode] = useState("");
   const [error, setError] = useState("");
@@ -50,7 +51,7 @@ export default function LoginPage() {
   const activeAccounts = useMemo(() => {
     const roleOrder = ["Owner", "Admin", "Cashier", "Barista"] as const;
 
-    return [...employeeItems]
+    return [...employees]
       .filter((item) => item.status === "Aktif")
       .sort((firstItem, secondItem) => {
         const firstRoleIndex = roleOrder.indexOf(firstItem.role);
@@ -62,7 +63,7 @@ export default function LoginPage() {
 
         return firstItem.name.localeCompare(secondItem.name);
       });
-  }, []);
+  }, [employees]);
 
   const matchedAccount = useMemo(() => {
     const normalizedUsername = username.trim().toLowerCase();
@@ -71,10 +72,8 @@ export default function LoginPage() {
       return null;
     }
 
-    return (
-      employeeItems.find((item) => item.username.toLowerCase() === normalizedUsername) ?? null
-    );
-  }, [username]);
+    return employees.find((item) => item.username.toLowerCase() === normalizedUsername) ?? null;
+  }, [employees, username]);
 
   useEffect(() => {
     const lastUsername = getLastUsedUsername();
@@ -91,7 +90,15 @@ export default function LoginPage() {
     }
   }, [activeAccounts]);
 
-  const handleSelectAccount = (account: (typeof employeeItems)[number]) => {
+  useEffect(() => {
+    if (isLoading || isSubmitting || !session) {
+      return;
+    }
+
+    router.replace(consumeAuthRedirect(session.role) ?? getDefaultRouteForRole(session.role));
+  }, [isLoading, isSubmitting, router, session]);
+
+  const handleSelectAccount = (account: (typeof activeAccounts)[number]) => {
     setUsername(account.username);
     setPinCode(account.pinCode);
     setError("");

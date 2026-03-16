@@ -189,8 +189,9 @@ export function CheckoutSheet({
                   <button
                     type="button"
                     onClick={onConfirm}
+                    disabled={!canCompletePayment}
                     aria-disabled={!canCompletePayment}
-                    className="h-12 w-full rounded-2xl bg-[#8B572A] text-sm font-semibold text-white transition hover:opacity-90"
+                    className="h-12 w-full rounded-2xl bg-[#8B572A] text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-stone-300"
                   >
                     {confirmLabels[paymentMethod]}
                   </button>

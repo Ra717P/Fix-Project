@@ -193,7 +193,7 @@ export function MenuManagementView({
                   </>
                 ) : (
                   <div className="rounded-2xl border border-[#F3D7D7] bg-[#FFF8F2] px-4 py-3 text-sm text-stone-600">
-                    Akses {session?.role ?? "user"} hanya bisa menandai menu sebagai habis.
+                    Akses {session?.role ?? "user"} hanya bisa mengubah status menu menjadi habis atau tersedia kembali.
                   </div>
                 )}
               </div>
@@ -437,21 +437,14 @@ export function MenuManagementView({
                           <button
                             type="button"
                             onClick={() => onToggleAvailability(item.id)}
-                            disabled={!isOwner && !item.isAvailable}
                             className={cn(
                               "inline-flex h-11 items-center justify-center rounded-2xl px-4 text-sm font-semibold transition",
-                              !isOwner && !item.isAvailable
-                                ? "cursor-not-allowed bg-stone-200 text-stone-500"
-                                : item.isAvailable
-                                  ? "bg-[#FDECEC] text-[#9A2B2B] hover:opacity-90"
-                                  : "bg-[#E8F5EC] text-[#1D6B3A] hover:opacity-90"
+                              item.isAvailable
+                                ? "bg-[#FDECEC] text-[#9A2B2B] hover:opacity-90"
+                                : "bg-[#E8F5EC] text-[#1D6B3A] hover:opacity-90"
                             )}
                           >
-                            {!isOwner && !item.isAvailable
-                              ? "Sudah Habis"
-                              : item.isAvailable
-                                ? "Tandai Habis"
-                                : "Aktifkan Lagi"}
+                            {item.isAvailable ? "Tandai Habis" : "Aktifkan Lagi"}
                           </button>
                         </div>
                       </div>

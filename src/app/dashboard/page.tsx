@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { Coffee, FileBarChart2, Settings, ShoppingBag, Users } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
-import { employeeItems, salesOverview, storeSettings } from "@/data/dashboard-data";
-import { menuItems } from "@/data/pos-data";
+import { salesOverview, storeSettings } from "@/data/dashboard-data";
 import { useAuth } from "@/hooks/use-auth";
+import { usePos } from "@/hooks/use-pos";
 import { formatRupiah } from "@/lib/utils/format-rupiah";
 
 const adminLinks = [
@@ -37,7 +37,8 @@ const adminLinks = [
 ] as const;
 
 export default function DashboardPage() {
-  const { session } = useAuth();
+  const { employees, session } = useAuth();
+  const { menuCatalog } = usePos();
   const visibleAdminLinks = useMemo(() => {
     const isOwner = session?.role === "Owner";
 
@@ -80,14 +81,14 @@ export default function DashboardPage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-400">
                 Total Menu
               </p>
-              <p className="mt-2 text-2xl font-semibold text-stone-900">{menuItems.length}</p>
+              <p className="mt-2 text-2xl font-semibold text-stone-900">{menuCatalog.length}</p>
             </div>
 
             <div className="rounded-2xl bg-white/90 p-4 shadow-sm">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-400">
                 Total Karyawan
               </p>
-              <p className="mt-2 text-2xl font-semibold text-stone-900">{employeeItems.length}</p>
+              <p className="mt-2 text-2xl font-semibold text-stone-900">{employees.length}</p>
             </div>
 
             <div className="rounded-2xl bg-white/90 p-4 shadow-sm">
